@@ -34,12 +34,14 @@ export default function AdminLoginPage() {
         throw new Error(data.error || "로그인에 실패했습니다");
       }
 
-      // 성공 시 대시보드로 이동 (쿠키 저장을 위한 약간의 딜레이)
-      await new Promise(resolve => setTimeout(resolve, 100));
-      window.location.replace("/");
+      // 쿠키가 저장되었는지 확인하기 위해 인증 상태 체크
+      // 약간의 딜레이 후 페이지 리로드하여 미들웨어가 쿠키를 확인하도록 함
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+      // 전체 페이지 리로드로 쿠키 기반 인증 확인
+      window.location.href = "/";
     } catch (err) {
       setError(err instanceof Error ? err.message : "로그인에 실패했습니다");
-    } finally {
       setIsLoading(false);
     }
   };
