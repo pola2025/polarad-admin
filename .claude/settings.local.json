@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "mcp__playwright__playwright_navigate",
+      "Bash(npm run dev:*)",
+      "Bash(taskkill:*)",
+      "mcp__playwright__playwright_screenshot",
+      "mcp__playwright__playwright_click",
+      "mcp__playwright__playwright_evaluate",
+      "Bash(npm run build:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nchore: add missing dependencies for build\n\n- @aws-sdk/client-s3, @aws-sdk/s3-request-presigner for R2 storage\n- @react-pdf/renderer for PDF generation\n- nodemailer, @types/nodemailer for email\n- resend for email service\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git push:*)",
+      "Bash(vercel --prod:*)",
+      "Bash(curl:*)",
+      "mcp__playwright__playwright_fill",
+      "Bash(git commit:*)"
+    ]
+  }
+}

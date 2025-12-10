@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@polarad/database";
 import bcrypt from "bcryptjs";
-import { cookies } from "next/headers";
 import { SignJWT } from "jose";
 
 const JWT_SECRET = new TextEncoder().encode(
@@ -63,17 +62,8 @@ export async function POST(request: NextRequest) {
       .setExpirationTime("24h")
       .sign(JWT_SECRET);
 
-    // 쿠키에 토큰 저장
-    const cookieStore = await cookies();
-    cookieStore.set("auth-token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 60 * 60 * 24, // 24시간
-      path: "/",
-    });
-
-    return NextResponse.json({
+    // 응답 생성
+    const response = NextResponse.json({
       success: true,
       admin: {
         id: matchedAdmin.id,
@@ -82,6 +72,17 @@ export async function POST(request: NextRequest) {
         role: matchedAdmin.role,
       },
     });
+
+    // 쿠키에 토큰 저장
+    response.cookies.set("auth-token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24, // 24시간
+      path: "/",
+    });
+
+    return response;
   } catch (error) {
     console.error("Admin login error:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
