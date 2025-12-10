@@ -73,13 +73,15 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // 쿠키에 토큰 저장
+    // 쿠키에 토큰 저장 (Vercel 프로덕션에서는 항상 HTTPS)
+    const isProduction = process.env.VERCEL_ENV === "production" || process.env.NODE_ENV === "production";
     response.cookies.set("auth-token", token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: isProduction,
       sameSite: "lax",
       maxAge: 60 * 60 * 24, // 24시간
       path: "/",
+      domain: undefined, // 현재 도메인 자동 사용
     });
 
     return response;

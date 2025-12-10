@@ -34,8 +34,9 @@ export default function AdminLoginPage() {
         throw new Error(data.error || "로그인에 실패했습니다");
       }
 
-      // 성공 시 대시보드로 이동
-      window.location.href = "/";
+      // 성공 시 대시보드로 이동 (쿠키 저장을 위한 약간의 딜레이)
+      await new Promise(resolve => setTimeout(resolve, 100));
+      window.location.replace("/");
     } catch (err) {
       setError(err instanceof Error ? err.message : "로그인에 실패했습니다");
     } finally {
