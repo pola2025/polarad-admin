@@ -1,0 +1,625 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id                String             @id @default(cuid())
+  name              String
+  email             String             @unique
+  phone             String
+  password          String
+  smsConsent        Boolean            @default(false) @map("sms_consent")
+  emailConsent      Boolean            @default(false) @map("email_consent")
+  telegramChatId    String?            @map("telegram_chat_id")
+  telegramEnabled   Boolean            @default(false) @map("telegram_enabled")
+  isActive          Boolean            @default(true) @map("is_active")
+  lastLoginAt       DateTime?          @map("last_login_at")
+  clientId          String?            @unique @map("client_id")
+  createdAt         DateTime           @default(now()) @map("created_at")
+  updatedAt         DateTime           @updatedAt @map("updated_at")
+  clientName        String             @map("client_name")
+  submission        Submission?
+  userNotifications UserNotification[]
+  client            Client?            @relation(fields: [clientId], references: [id])
+  workflows         Workflow[]
+  contracts              Contract[]
+  communicationThreads   CommunicationThread[] @relation("UserCommunicationThreads")
+
+  @@index([clientName])
+  @@index([email])
+  @@index([phone])
+  @@map("users")
+}
+
+model Submission {
+  id              String           @id @default(cuid())
+  userId          String           @unique @map("user_id")
+  businessLicense String?          @map("business_license")
+  profilePhoto    String?          @map("profile_photo")
+  brandName       String?          @map("brand_name")
+  contactEmail    String?          @map("contact_email")
+  contactPhone    String?          @map("contact_phone")
+  bankAccount     String?          @map("bank_account")
+  deliveryAddress String?          @map("delivery_address")
+  websiteStyle    String?          @map("website_style")
+  websiteColor    String?          @map("website_color")
+  blogDesignNote  String?          @map("blog_design_note")
+  additionalNote  String?          @map("additional_note")
+  status          SubmissionStatus @default(DRAFT)
+  isComplete      Boolean          @default(false) @map("is_complete")
+  completedAt     DateTime?        @map("completed_at")
+
+  // 검토 관련 필드
+  submittedAt     DateTime?        @map("submitted_at")
+  reviewedAt      DateTime?        @map("reviewed_at")
+  reviewedBy      String?          @map("reviewed_by")
+  rejectionReason String?          @map("rejection_reason")
+
+  // Slack 채널 연동
+  slackChannelId  String?          @map("slack_channel_id")
+
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("submissions")
+}
+
+model Workflow {
+  id               String         @id @default(cuid())
+  userId           String         @map("user_id")
+  type             WorkflowType
+  status           WorkflowStatus @default(PENDING)
+  submittedAt      DateTime?      @map("submitted_at")
+  designStartedAt  DateTime?      @map("design_started_at")
+  designUploadedAt DateTime?      @map("design_uploaded_at")
+  orderRequestedAt DateTime?      @map("order_requested_at")
+  orderApprovedAt  DateTime?      @map("order_approved_at")
+  completedAt      DateTime?      @map("completed_at")
+  shippedAt        DateTime?      @map("shipped_at")
+  designUrl        String?        @map("design_url")
+  finalUrl         String?        @map("final_url")
+  courier          String?
+  trackingNumber   String?        @map("tracking_number")
+  revisionCount    Int            @default(0) @map("revision_count")
+  revisionNote     String?        @map("revision_note")
+  adminNote        String?        @map("admin_note")
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
+  logs             WorkflowLog[]
+  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  design           Design?
+
+  @@unique([userId, type])
+  @@index([userId])
+  @@index([type])
+  @@index([status])
+  @@map("workflows")
+}
+
+model WorkflowLog {
+  id         String          @id @default(cuid())
+  workflowId String          @map("workflow_id")
+  fromStatus WorkflowStatus? @map("from_status")
+  toStatus   WorkflowStatus  @map("to_status")
+  changedBy  String?         @map("changed_by")
+  note       String?
+  createdAt  DateTime        @default(now()) @map("created_at")
+  workflow   Workflow        @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@index([workflowId])
+  @@map("workflow_logs")
+}
+
+model UserNotification {
+  id           String               @id @default(cuid())
+  userId       String               @map("user_id")
+  type         UserNotificationType
+  channel      NotificationChannel  @default(TELEGRAM)
+  title        String?
+  message      String
+  status       NotificationStatus   @default(SENT)
+  errorMessage String?              @map("error_message")
+  sentAt       DateTime             @default(now()) @map("sent_at")
+  readAt       DateTime?            @map("read_at")
+  createdAt    DateTime             @default(now()) @map("created_at")
+  user         User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([type])
+  @@index([sentAt(sort: Desc)])
+  @@map("user_notifications")
+}
+
+model Client {
+  id                    String            @id @default(cuid())
+  clientId              String            @unique @map("client_id")
+  clientName            String            @map("client_name")
+  email                 String            @unique
+  phone                 String?
+  contactPhone          String?           @map("contact_phone")
+  contactName           String?           @map("contact_name")
+  slug                  String?
+  passwordHash          String?           @map("password_hash")
+  metaAdAccountId       String?           @map("meta_ad_account_id")
+  metaAccessToken       String?           @map("meta_access_token")
+  metaRefreshToken      String?           @map("meta_refresh_token")
+  encryptedAccessToken  String?           @map("encrypted_access_token")
+  tokenExpiresAt        DateTime?         @map("token_expires_at")
+  authStatus            AuthStatus        @default(ACTIVE) @map("auth_status")
+  servicePeriodStart    DateTime?         @map("service_period_start")
+  servicePeriodEnd      DateTime?         @map("service_period_end")
+  telegramChatId        String?           @map("telegram_chat_id")
+  telegramEnabled       Boolean           @default(false) @map("telegram_enabled")
+  planType              PlanType          @default(FREE) @map("plan_type")
+  isActive              Boolean           @default(true) @map("is_active")
+  memo                  String?
+  createdAt             DateTime          @default(now()) @map("created_at")
+  updatedAt             DateTime          @updatedAt @map("updated_at")
+  notificationLogs      NotificationLog[]
+  tokenRefreshLogs      TokenRefreshLog[]
+  paymentHistory        PaymentHistory[]
+  smsLogs               SmsLog[]
+  rawData               RawData[]
+  clientTargets         ClientTarget[]
+  user                  User?
+
+  @@index([email])
+  @@index([clientId])
+  @@index([isActive])
+  @@index([tokenExpiresAt])
+  @@index([authStatus])
+  @@index([servicePeriodEnd])
+  @@map("clients")
+}
+
+model NotificationLog {
+  id               String              @id @default(cuid())
+  clientId         String              @map("client_id")
+  notificationType NotificationType    @map("notification_type")
+  channel          NotificationChannel @default(TELEGRAM)
+  message          String?
+  status           NotificationStatus  @default(SENT)
+  errorMessage     String?             @map("error_message")
+  sentAt           DateTime            @default(now()) @map("sent_at")
+  createdAt        DateTime            @default(now()) @map("created_at")
+  client           Client              @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@index([notificationType])
+  @@index([sentAt(sort: Desc)])
+  @@index([clientId, notificationType, sentAt])
+  @@map("notification_logs")
+}
+
+model TokenRefreshLog {
+  id           String    @id @default(cuid())
+  clientId     String    @map("client_id")
+  refreshedAt  DateTime  @default(now()) @map("refreshed_at")
+  expiresAt    DateTime? @map("expires_at")
+  success      Boolean   @default(true)
+  errorMessage String?   @map("error_message")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  client       Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId, refreshedAt(sort: Desc)])
+  @@map("token_refresh_logs")
+}
+
+model Admin {
+  id        String    @id @default(cuid())
+  email     String    @unique
+  name      String
+  password  String
+  role      AdminRole @default(OPERATOR)
+  isActive  Boolean   @default(true) @map("is_active")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  @@map("admins")
+}
+
+enum SubmissionStatus {
+  DRAFT
+  SUBMITTED
+  IN_REVIEW
+  APPROVED
+  REJECTED
+}
+
+enum WorkflowType {
+  NAMECARD
+  NAMETAG
+  CONTRACT
+  ENVELOPE
+  WEBSITE
+  BLOG
+  META_ADS
+  NAVER_ADS
+}
+
+enum WorkflowStatus {
+  PENDING
+  SUBMITTED
+  IN_PROGRESS
+  DESIGN_UPLOADED
+  ORDER_REQUESTED
+  ORDER_APPROVED
+  COMPLETED
+  SHIPPED
+  CANCELLED
+}
+
+enum UserNotificationType {
+  WELCOME
+  DEADLINE_REMINDER
+  SUBMISSION_RECEIVED
+  DESIGN_UPLOADED
+  DESIGN_FEEDBACK       // 피드백 알림
+  DESIGN_APPROVED       // 시안 확정됨
+  ORDER_CONFIRMED
+  SHIPPING_NOTIFICATION
+  REPORT_DAILY
+  REPORT_WEEKLY
+  CUSTOM
+}
+
+enum AuthStatus {
+  ACTIVE
+  AUTH_REQUIRED
+  TOKEN_EXPIRED
+  TOKEN_EXPIRING
+}
+
+enum PlanType {
+  FREE
+  BASIC
+  PREMIUM
+  ENTERPRISE
+}
+
+enum NotificationType {
+  TOKEN_EXPIRY_CRITICAL
+  TOKEN_EXPIRY_WARNING
+  TOKEN_EXPIRY_NOTICE
+  AUTH_REQUIRED
+  SERVICE_EXPIRING
+  SERVICE_EXPIRED
+  WELCOME
+  REPORT_DAILY
+  REPORT_WEEKLY
+  CUSTOM
+}
+
+enum NotificationChannel {
+  TELEGRAM
+  SMS
+  EMAIL
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  DELIVERED
+  FAILED
+}
+
+enum AdminRole {
+  SUPER
+  MANAGER
+  OPERATOR
+}
+
+// ============================================================================
+// 계약 관련 모델
+// ============================================================================
+
+model Package {
+  id          String   @id @default(cuid())
+  name        String   @unique // BASIC, STANDARD, PREMIUM, CUSTOM
+  displayName String   @map("display_name") // 베이직, 스탠다드, 프리미엄, 맞춤형
+  price       Int      // 월 금액 (원)
+  description String?
+  features    String[] // 포함 기능 목록
+  isActive    Boolean  @default(true) @map("is_active")
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  contracts   Contract[]
+
+  @@map("packages")
+}
+
+model Contract {
+  id              String         @id @default(cuid())
+  contractNumber  String         @unique @map("contract_number") // 계약번호 (YYYYMMDD-XXXX)
+  userId          String         @map("user_id")
+  packageId       String         @map("package_id")
+
+  // 계약 정보
+  companyName     String?        @map("company_name") // 상호
+  ceoName         String?        @map("ceo_name") // 대표자명
+  businessNumber  String?        @map("business_number") // 사업자등록번호
+  address         String?        // 사업장 주소
+  contactName     String?        @map("contact_name") // 담당자명
+  contactPhone    String?        @map("contact_phone") // 연락처
+  contactEmail    String?        @map("contact_email") // 이메일
+
+  // 계약 조건
+  contractPeriod  Int            @default(12) @map("contract_period") // 계약 기간 (개월)
+  monthlyFee      Int            @map("monthly_fee") // 월 서비스 비용
+  setupFee        Int            @default(0) @map("setup_fee") // 초기 세팅비
+  totalAmount     Int            @map("total_amount") // 총 계약 금액
+  startDate       DateTime?      @map("start_date") // 계약 시작일
+  endDate         DateTime?      @map("end_date") // 계약 종료일
+
+  // 추가 옵션
+  additionalNotes String?        @map("additional_notes") // 특이사항
+
+  // 서명 정보
+  clientSignature String?        @map("client_signature") // 계약자 서명 (base64)
+  signedAt        DateTime?      @map("signed_at") // 서명 일시
+  signedIp        String?        @map("signed_ip") // 서명 시 IP
+
+  // 상태
+  status          ContractStatus @default(PENDING)
+  approvedAt      DateTime?      @map("approved_at")
+  approvedBy      String?        @map("approved_by") // 승인 관리자 ID
+  rejectedAt      DateTime?      @map("rejected_at")
+  rejectedBy      String?        @map("rejected_by")
+  rejectReason    String?        @map("reject_reason")
+
+  // PDF 및 발송 정보
+  pdfUrl          String?        @map("pdf_url")
+  emailSentAt     DateTime?      @map("email_sent_at")
+
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  package         Package        @relation(fields: [packageId], references: [id])
+  logs            ContractLog[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([contractNumber])
+  @@index([createdAt(sort: Desc)])
+  @@map("contracts")
+}
+
+model ContractLog {
+  id         String         @id @default(cuid())
+  contractId String         @map("contract_id")
+  fromStatus ContractStatus? @map("from_status")
+  toStatus   ContractStatus @map("to_status")
+  changedBy  String?        @map("changed_by")
+  note       String?
+  createdAt  DateTime       @default(now()) @map("created_at")
+  contract   Contract       @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  @@index([contractId])
+  @@map("contract_logs")
+}
+
+enum ContractStatus {
+  PENDING     // 계약 요청 대기
+  SUBMITTED   // 계약서 제출됨
+  APPROVED    // 승인됨
+  REJECTED    // 거절됨
+  ACTIVE      // 계약 진행 중
+  EXPIRED     // 계약 만료
+  CANCELLED   // 계약 취소
+}
+
+// 시스템 설정 (Key-Value 형태)
+model Setting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("settings")
+}
+
+// ============================================================================
+// Meta 광고 관리 관련 모델 (bas-meta 기반)
+// ============================================================================
+
+model PaymentHistory {
+  id            String   @id @default(cuid())
+  clientId      String   @map("client_id")
+  paymentDate   DateTime @map("payment_date")
+  amount        Decimal? @db.Decimal(12, 2)
+  paymentType   String   @default("monthly") @map("payment_type") // monthly, quarterly
+  paymentMethod String?  @map("payment_method") // 계좌이체, 카드결제
+  memo          String?
+  serviceMonths Int      @default(3) @map("service_months")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@index([paymentDate(sort: Desc)])
+  @@map("payment_history")
+}
+
+model SmsLog {
+  id          String   @id @default(cuid())
+  clientId    String   @map("client_id")
+  messageType String   @map("message_type") // d7, d3, d0, expired
+  phone       String
+  status      String   // success, failed
+  requestId   String?  @map("request_id")
+  error       String?
+  sentAt      DateTime @default(now()) @map("sent_at")
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@index([sentAt(sort: Desc)])
+  @@map("sms_logs")
+}
+
+model RawData {
+  id           String   @id @default(cuid())
+  clientId     String   @map("client_id")
+  date         DateTime @db.Date
+  adId         String   @map("ad_id")
+  adName       String   @map("ad_name")
+  campaignId   String   @map("campaign_id")
+  campaignName String   @map("campaign_name")
+  platform     String   // facebook, instagram
+  device       String   // desktop, mobile
+  currency     String   @default("KRW")
+  impressions  Int      @default(0)
+  reach        Int      @default(0)
+  clicks       Int      @default(0)
+  leads        Int      @default(0)
+  spend        Decimal  @default(0) @db.Decimal(12, 2)
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@unique([clientId, date, adId, platform, device])
+  @@index([clientId, date])
+  @@index([date])
+  @@map("raw_data")
+}
+
+model ClientTarget {
+  id          String   @id @default(cuid())
+  clientId    String   @map("client_id")
+  targetMonth DateTime @db.Date @map("target_month") // YYYY-MM-01
+  targetLeads Int?     @map("target_leads")
+  targetSpend Decimal? @db.Decimal(12, 2) @map("target_spend")
+  targetCpl   Decimal? @db.Decimal(12, 2) @map("target_cpl")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@unique([clientId, targetMonth])
+  @@map("client_targets")
+}
+
+// ============================================================================
+// 커뮤니케이션 (문의하기) 관련 모델
+// ============================================================================
+
+model CommunicationThread {
+  id                     String                 @id @default(cuid())
+  userId                 String                 @map("user_id")
+  title                  String
+  category               String                 @default("일반") // 홈페이지, 로고, 인쇄물, 광고, 일반
+  status                 CommunicationStatus    @default(OPEN)
+  expectedCompletionDate DateTime?              @map("expected_completion_date")
+  lastReplyAt            DateTime               @default(now()) @map("last_reply_at")
+  createdAt              DateTime               @default(now()) @map("created_at")
+  updatedAt              DateTime               @updatedAt @map("updated_at")
+
+  user                   User                   @relation("UserCommunicationThreads", fields: [userId], references: [id], onDelete: Cascade)
+  messages               CommunicationMessage[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([lastReplyAt(sort: Desc)])
+  @@map("communication_threads")
+}
+
+model CommunicationMessage {
+  id                     String              @id @default(cuid())
+  threadId               String              @map("thread_id")
+  authorId               String              @map("author_id")
+  authorType             String              // user, admin
+  authorName             String              @map("author_name")
+  content                String
+  attachments            String[]            @default([])
+  expectedCompletionDate DateTime?           @map("expected_completion_date")
+  isReadByUser           Boolean             @default(false) @map("is_read_by_user")
+  readByUserAt           DateTime?           @map("read_by_user_at")
+  isReadByAdmin          Boolean             @default(false) @map("is_read_by_admin")
+  readByAdminAt          DateTime?           @map("read_by_admin_at")
+  createdAt              DateTime            @default(now()) @map("created_at")
+
+  thread                 CommunicationThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  @@index([threadId])
+  @@index([createdAt])
+  @@map("communication_messages")
+}
+
+enum CommunicationStatus {
+  OPEN        // 대기중
+  IN_PROGRESS // 진행중
+  RESOLVED    // 완료
+}
+
+// ============================================================================
+// 시안(디자인) 관리 관련 모델
+// ============================================================================
+
+model Design {
+  id              String          @id @default(cuid())
+  workflowId      String          @unique @map("workflow_id")
+  status          DesignStatus    @default(DRAFT)
+  currentVersion  Int             @default(1) @map("current_version")
+  approvedAt      DateTime?       @map("approved_at")
+  approvedVersion Int?            @map("approved_version")
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
+
+  workflow        Workflow        @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  versions        DesignVersion[]
+
+  @@index([workflowId])
+  @@index([status])
+  @@map("designs")
+}
+
+model DesignVersion {
+  id           String            @id @default(cuid())
+  designId     String            @map("design_id")
+  version      Int               // 1, 2, 3, ...
+  url          String            // 시안 URL
+  note         String?           // 버전 메모 (변경사항 등)
+  uploadedBy   String            @map("uploaded_by") // admin ID
+  createdAt    DateTime          @default(now()) @map("created_at")
+
+  design       Design            @relation(fields: [designId], references: [id], onDelete: Cascade)
+  feedbacks    DesignFeedback[]
+
+  @@unique([designId, version])
+  @@index([designId])
+  @@map("design_versions")
+}
+
+model DesignFeedback {
+  id           String         @id @default(cuid())
+  versionId    String         @map("version_id")
+  authorId     String         @map("author_id")
+  authorType   String         // "user" | "admin"
+  authorName   String         @map("author_name")
+  content      String
+  createdAt    DateTime       @default(now()) @map("created_at")
+
+  version      DesignVersion  @relation(fields: [versionId], references: [id], onDelete: Cascade)
+
+  @@index([versionId])
+  @@index([createdAt])
+  @@map("design_feedbacks")
+}
+
+enum DesignStatus {
+  DRAFT             // 임시저장
+  PENDING_REVIEW    // 확인 대기
+  REVISION_REQUESTED // 수정 요청
+  APPROVED          // 확정
+}
