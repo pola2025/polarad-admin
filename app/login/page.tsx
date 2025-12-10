@@ -11,16 +11,19 @@ export default function AdminLoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("[Login] Form submitted, password length:", password.length);
     setIsLoading(true);
     setError(null);
 
     if (!password) {
+      console.log("[Login] Password empty, showing error");
       setError("비밀번호를 입력해주세요");
       setIsLoading(false);
       return;
     }
 
     try {
+      console.log("[Login] Sending request to /api/auth...");
       const response = await fetch("/api/auth", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -28,19 +31,19 @@ export default function AdminLoginPage() {
         credentials: "include",
       });
 
+      console.log("[Login] Response status:", response.status);
       const data = await response.json();
+      console.log("[Login] Response data:", data);
 
       if (!response.ok) {
         throw new Error(data.error || "로그인에 실패했습니다");
       }
 
-      // 쿠키가 저장되었는지 확인하기 위해 인증 상태 체크
-      // 약간의 딜레이 후 페이지 리로드하여 미들웨어가 쿠키를 확인하도록 함
-      await new Promise(resolve => setTimeout(resolve, 300));
-
+      console.log("[Login] Login successful, redirecting...");
       // 전체 페이지 리로드로 쿠키 기반 인증 확인
       window.location.href = "/";
     } catch (err) {
+      console.error("[Login] Error:", err);
       setError(err instanceof Error ? err.message : "로그인에 실패했습니다");
       setIsLoading(false);
     }
