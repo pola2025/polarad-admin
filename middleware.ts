@@ -108,5 +108,8 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\..*).*)'],
+  matcher: [
+    // /api/auth는 미들웨어에서 완전히 제외 (쿠키 설정 보장)
+    '/((?!_next/static|_next/image|favicon.ico|api/auth|.*\\..*).*)',
+  ],
 }
