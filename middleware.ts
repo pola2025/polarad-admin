@@ -57,11 +57,14 @@ function hasAdminPermission(role: string, pathname: string): boolean {
 async function getTokenPayload(request: NextRequest) {
   try {
     const token = request.cookies.get('auth-token')?.value
+    console.log('[Middleware] Token exists:', !!token)
     if (!token) return null
 
     const { payload } = await jwtVerify(token, JWT_SECRET)
+    console.log('[Middleware] JWT verified, payload:', JSON.stringify(payload))
     return payload as { type: string; role?: string; userId: string }
-  } catch {
+  } catch (error) {
+    console.error('[Middleware] JWT verification failed:', error)
     return null
   }
 }
