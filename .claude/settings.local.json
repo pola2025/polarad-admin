@@ -15,7 +15,8 @@
       "Bash(vercel --prod:*)",
       "Bash(curl:*)",
       "mcp__playwright__playwright_fill",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "mcp__playwright__playwright_console_logs"
     ]
   }
 }
