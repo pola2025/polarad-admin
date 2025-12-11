@@ -52,6 +52,11 @@ interface User {
   name: string;
   email: string;
   phone: string;
+  submission?: {
+    contactEmail?: string;
+    contactPhone?: string;
+    brandName?: string;
+  };
 }
 
 interface Package {
@@ -92,9 +97,8 @@ export default function AdminContractsPage() {
 
   // 계약서 생성 모달 상태
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [users, setUsers] = useState<User[]>([]);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
   const [packages, setPackages] = useState<Package[]>([]);
-  const [userSearch, setUserSearch] = useState("");
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [selectedPackage, setSelectedPackage] = useState<Package | null>(null);
   const [contractPeriod, setContractPeriod] = useState(12);
@@ -102,6 +106,8 @@ export default function AdminContractsPage() {
   const [setupFee, setSetupFee] = useState<number | "">(0);
   const [additionalNotes, setAdditionalNotes] = useState("");
   const [creating, setCreating] = useState(false);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
 
   const fetchContracts = useCallback(async () => {
     try {
@@ -125,19 +131,22 @@ export default function AdminContractsPage() {
     fetchContracts();
   }, [fetchContracts]);
 
-  // 사용자 검색
-  const searchUsers = useCallback(async (search: string) => {
-    if (!search || search.length < 2) {
-      setUsers([]);
-      return;
-    }
+  // 전체 사용자 목록 조회 (한글 가나다순 정렬)
+  const fetchAllUsers = useCallback(async () => {
+    setLoadingUsers(true);
     try {
-      const res = await fetch(`/api/users?search=${encodeURIComponent(search)}&limit=10`);
+      const res = await fetch("/api/users?limit=1000");
       if (!res.ok) return;
       const data = await res.json();
-      setUsers(data.data || []);
+      // 브랜드 상호명(clientName) 기준 한글 가나다순 정렬
+      const sortedUsers = (data.data || []).sort((a: User, b: User) =>
+        a.clientName.localeCompare(b.clientName, 'ko-KR')
+      );
+      setAllUsers(sortedUsers);
     } catch (error) {
-      console.error("사용자 검색 오류:", error);
+      console.error("사용자 목록 조회 오류:", error);
+    } finally {
+      setLoadingUsers(false);
     }
   }, []);
 
@@ -157,13 +166,14 @@ export default function AdminContractsPage() {
   const openCreateModal = () => {
     setShowCreateModal(true);
     fetchPackages();
+    fetchAllUsers();
     setSelectedUser(null);
     setSelectedPackage(null);
-    setUserSearch("");
     setContractPeriod(12);
     setMonthlyFee("");
     setSetupFee(0);
     setAdditionalNotes("");
+    setUserDropdownOpen(false);
   };
 
   // 패키지 선택 시 금액 자동 설정
@@ -210,13 +220,6 @@ export default function AdminContractsPage() {
     }
   };
 
-  // 사용자 검색 디바운스
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      searchUsers(userSearch);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [userSearch, searchUsers]);
 
   const handleApprove = async (id: string) => {
     if (!confirm("이 계약을 승인하시겠습니까?")) return;
@@ -569,10 +572,10 @@ export default function AdminContractsPage() {
             </div>
 
             <div className="p-4 space-y-4">
-              {/* 사용자 선택 */}
+              {/* 사용자 선택 (드롭다운) */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  사용자 선택 <span className="text-red-500">*</span>
+                  브랜드 상호명 선택 <span className="text-red-500">*</span>
                 </label>
                 {selectedUser ? (
                   <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
@@ -589,29 +592,37 @@ export default function AdminContractsPage() {
                   </div>
                 ) : (
                   <div className="relative">
-                    <input
-                      type="text"
-                      value={userSearch}
-                      onChange={(e) => setUserSearch(e.target.value)}
-                      placeholder="이름 또는 이메일로 검색..."
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    />
-                    {users.length > 0 && (
-                      <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                        {users.map((user) => (
-                          <button
-                            key={user.id}
-                            onClick={() => {
-                              setSelectedUser(user);
-                              setUserSearch("");
-                              setUsers([]);
-                            }}
-                            className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"
-                          >
-                            <p className="font-medium text-gray-900 dark:text-white">{user.clientName}</p>
-                            <p className="text-sm text-gray-500">{user.name} · {user.email}</p>
-                          </button>
-                        ))}
+                    <button
+                      type="button"
+                      onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-left flex items-center justify-between"
+                    >
+                      <span className="text-gray-500">
+                        {loadingUsers ? "사용자 목록 로딩 중..." : "브랜드 상호명을 선택하세요"}
+                      </span>
+                      <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${userDropdownOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                    {userDropdownOpen && !loadingUsers && (
+                      <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                        {allUsers.length === 0 ? (
+                          <div className="px-3 py-4 text-center text-gray-500">
+                            가입된 사용자가 없습니다.
+                          </div>
+                        ) : (
+                          allUsers.map((user) => (
+                            <button
+                              key={user.id}
+                              onClick={() => {
+                                setSelectedUser(user);
+                                setUserDropdownOpen(false);
+                              }}
+                              className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-700 last:border-b-0"
+                            >
+                              <p className="font-medium text-gray-900 dark:text-white">{user.clientName}</p>
+                              <p className="text-sm text-gray-500">{user.name} · {user.email}</p>
+                            </button>
+                          ))
+                        )}
                       </div>
                     )}
                   </div>

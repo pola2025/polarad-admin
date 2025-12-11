@@ -23,7 +23,11 @@
       "mcp__playwright__playwright_close",
       "mcp__playwright__playwright_expect_response",
       "mcp__playwright__playwright_assert_response",
-      "WebSearch"
+      "WebSearch",
+      "Bash(npm ls:*)",
+      "Bash(npm view:*)",
+      "Bash(vercel ls:*)",
+      "Bash(vercel rm:*)"
     ]
   }
 }

@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@polarad/database";
 import { requireAdmin } from "@/lib/auth";
+import { postMessage } from "@/lib/notification/slackClient";
 
 interface RouteParams {
   params: Promise<{ threadId: string }>;
@@ -60,8 +61,16 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       include: {
         user: {
           select: {
+            id: true,
+            name: true,
+            clientName: true,
             telegramChatId: true,
             telegramEnabled: true,
+            submission: {
+              select: {
+                slackChannelId: true,
+              },
+            },
           },
         },
       },
@@ -119,6 +128,52 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     // 사용자에게 텔레그램 알림 발송
     if (thread.user.telegramEnabled && thread.user.telegramChatId) {
       sendUserNotification(thread.user.telegramChatId, thread.title);
+    }
+
+    // 슬랙 채널로 관리자 답변 알림
+    const slackChannelId = thread.user.submission?.slackChannelId;
+    if (slackChannelId) {
+      const attachmentText = attachments && attachments.length > 0
+        ? `\n\n📎 첨부파일: ${attachments.length}개`
+        : "";
+
+      await postMessage({
+        channelId: slackChannelId,
+        text: `💬 관리자 답변: ${content.substring(0, 50)}...`,
+        blocks: [
+          {
+            type: "header",
+            text: {
+              type: "plain_text",
+              text: "💬 관리자 답변 등록",
+            },
+          },
+          {
+            type: "section",
+            fields: [
+              { type: "mrkdwn", text: `*문의 제목:*\n${thread.title}` },
+              { type: "mrkdwn", text: `*카테고리:*\n${thread.category}` },
+            ],
+          },
+          {
+            type: "section",
+            text: {
+              type: "mrkdwn",
+              text: `*답변 내용:*\n${content}${attachmentText}`,
+            },
+          },
+          {
+            type: "context",
+            elements: [
+              {
+                type: "mrkdwn",
+                text: `👤 *${admin.name}* | 📅 ${new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })}`,
+              },
+            ],
+          },
+          { type: "divider" },
+        ],
+      });
     }
 
     return NextResponse.json({

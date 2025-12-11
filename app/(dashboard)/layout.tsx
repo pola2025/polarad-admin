@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -20,12 +20,19 @@ import {
   Palette,
 } from "lucide-react";
 
-const navItems = [
+interface NavItem {
+  href: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  badgeKey?: string;
+}
+
+const navItems: NavItem[] = [
   { href: "/", label: "대시보드", icon: LayoutDashboard },
   { href: "/users", label: "사용자 관리", icon: UserCircle },
   { href: "/submissions", label: "자료 제출 관리", icon: FileText },
   { href: "/designs", label: "시안 관리", icon: Palette },
-  { href: "/communications", label: "문의 관리", icon: MessageSquare },
+  { href: "/communications", label: "문의 관리", icon: MessageSquare, badgeKey: "communications" },
   { href: "/contracts", label: "계약 관리", icon: FileSignature },
   { href: "/workflows", label: "워크플로우 관리", icon: Package },
   { href: "/clients", label: "클라이언트 관리", icon: Users },
@@ -40,7 +47,32 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [badgeCounts, setBadgeCounts] = useState<Record<string, number>>({});
   const pathname = usePathname();
+
+  // 문의 관리 배지 카운트 조회
+  useEffect(() => {
+    const fetchBadgeCounts = async () => {
+      try {
+        const res = await fetch("/api/admin/communications?limit=1");
+        if (res.ok) {
+          const data = await res.json();
+          // OPEN 상태의 문의 개수 표시
+          setBadgeCounts((prev) => ({
+            ...prev,
+            communications: data.stats?.open || 0,
+          }));
+        }
+      } catch (error) {
+        console.error("배지 카운트 조회 오류:", error);
+      }
+    };
+
+    fetchBadgeCounts();
+    // 30초마다 갱신
+    const interval = setInterval(fetchBadgeCounts, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const isActive = (href: string) => {
     if (href === "/") return pathname === "/";
@@ -91,6 +123,7 @@ export default function DashboardLayout({
           {navItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.href);
+            const badgeCount = item.badgeKey ? badgeCounts[item.badgeKey] : 0;
             return (
               <Link
                 key={item.href}
@@ -106,7 +139,12 @@ export default function DashboardLayout({
                 `}
               >
                 <Icon className="w-5 h-5 flex-shrink-0" />
-                <span className="truncate">{item.label}</span>
+                <span className="truncate flex-1">{item.label}</span>
+                {badgeCount > 0 && (
+                  <span className="ml-auto bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center">
+                    {badgeCount > 99 ? "99+" : badgeCount}
+                  </span>
+                )}
               </Link>
             );
           })}

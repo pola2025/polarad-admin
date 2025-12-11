@@ -128,73 +128,208 @@ export async function POST(request: NextRequest) {
     const admin = await requireAdmin();
 
     const body = await request.json();
-    const { workflowId, url, note } = body;
+    const { workflowId, userId, workflowType, url, note, threadId, initialContent } = body;
 
-    if (!workflowId || !url) {
-      return NextResponse.json(
-        { error: "워크플로우 ID와 시안 URL은 필수입니다" },
-        { status: 400 }
-      );
-    }
+    // Case 1: 워크플로우 ID로 직접 생성 (기존 로직)
+    if (workflowId) {
+      if (!url) {
+        return NextResponse.json(
+          { error: "시안 URL은 필수입니다" },
+          { status: 400 }
+        );
+      }
 
-    // 워크플로우 존재 확인
-    const workflow = await prisma.workflow.findUnique({
-      where: { id: workflowId },
-      include: { design: true },
-    });
+      const workflow = await prisma.workflow.findUnique({
+        where: { id: workflowId },
+        include: { design: true },
+      });
 
-    if (!workflow) {
-      return NextResponse.json(
-        { error: "해당 워크플로우를 찾을 수 없습니다" },
-        { status: 404 }
-      );
-    }
+      if (!workflow) {
+        return NextResponse.json(
+          { error: "해당 워크플로우를 찾을 수 없습니다" },
+          { status: 404 }
+        );
+      }
 
-    // 이미 시안이 있는 경우
-    if (workflow.design) {
-      return NextResponse.json(
-        { error: "이미 시안이 존재합니다. 새 버전을 추가하세요." },
-        { status: 400 }
-      );
-    }
+      if (workflow.design) {
+        return NextResponse.json(
+          { error: "이미 시안이 존재합니다. 새 버전을 추가하세요." },
+          { status: 400 }
+        );
+      }
 
-    // 시안 생성 (첫 번전 포함)
-    const design = await prisma.design.create({
-      data: {
-        workflowId,
-        status: "DRAFT",
-        currentVersion: 1,
-        versions: {
-          create: {
-            version: 1,
-            url,
-            note: note || "최초 시안",
-            uploadedBy: admin.userId,
+      const design = await prisma.design.create({
+        data: {
+          workflowId,
+          status: "DRAFT",
+          currentVersion: 1,
+          versions: {
+            create: {
+              version: 1,
+              url,
+              note: note || "최초 시안",
+              uploadedBy: admin.userId,
+            },
           },
         },
-      },
-      include: {
-        versions: true,
-        workflow: {
-          select: {
-            id: true,
-            type: true,
-            user: {
-              select: {
-                id: true,
-                name: true,
-                clientName: true,
+        include: {
+          versions: true,
+          workflow: {
+            select: {
+              id: true,
+              type: true,
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  clientName: true,
+                },
               },
             },
           },
         },
-      },
-    });
+      });
 
-    return NextResponse.json({
-      success: true,
-      data: design,
-    });
+      return NextResponse.json({
+        success: true,
+        data: design,
+      });
+    }
+
+    // Case 2: 문의 스레드에서 시안 생성 (userId + workflowType 필요)
+    if (userId && workflowType) {
+      // 해당 사용자의 워크플로우 찾기 또는 생성
+      let workflow = await prisma.workflow.findFirst({
+        where: {
+          userId,
+          type: workflowType,
+        },
+        include: { design: true },
+      });
+
+      // 워크플로우가 없으면 새로 생성
+      if (!workflow) {
+        workflow = await prisma.workflow.create({
+          data: {
+            userId,
+            type: workflowType,
+            status: "IN_PROGRESS",
+          },
+          include: { design: true },
+        });
+      }
+
+      // 이미 시안이 있으면 해당 시안으로 이동
+      if (workflow.design) {
+        // 초기 내용이 있으면 피드백으로 추가
+        if (initialContent) {
+          const latestVersion = await prisma.designVersion.findFirst({
+            where: { designId: workflow.design.id },
+            orderBy: { version: "desc" },
+          });
+
+          if (latestVersion) {
+            await prisma.designFeedback.create({
+              data: {
+                versionId: latestVersion.id,
+                authorId: admin.userId,
+                authorType: "admin",
+                authorName: admin.name,
+                content: `[문의에서 이동] ${initialContent}`,
+              },
+            });
+          }
+        }
+
+        return NextResponse.json({
+          success: true,
+          data: workflow.design,
+          message: "기존 시안으로 이동합니다.",
+          existing: true,
+        });
+      }
+
+      // 새 시안 생성 (URL 없이도 가능)
+      const design = await prisma.design.create({
+        data: {
+          workflowId: workflow.id,
+          status: "DRAFT",
+          currentVersion: 1,
+          versions: {
+            create: {
+              version: 1,
+              url: url || "",
+              note: note || (threadId ? `문의 #${threadId.slice(-6)}에서 생성됨` : "문의에서 생성됨"),
+              uploadedBy: admin.userId,
+            },
+          },
+        },
+        include: {
+          versions: true,
+          workflow: {
+            select: {
+              id: true,
+              type: true,
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  clientName: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      // 초기 내용이 있으면 피드백으로 추가
+      if (initialContent && design.versions[0]) {
+        await prisma.designFeedback.create({
+          data: {
+            versionId: design.versions[0].id,
+            authorId: admin.userId,
+            authorType: "admin",
+            authorName: admin.name,
+            content: `[문의 내용]\n${initialContent}`,
+          },
+        });
+      }
+
+      // 문의 스레드가 있으면 연결 메시지 추가
+      if (threadId) {
+        await prisma.communicationMessage.create({
+          data: {
+            threadId,
+            authorId: admin.userId,
+            authorType: "admin",
+            authorName: admin.name,
+            content: `📎 이 문의를 기반으로 시안이 생성되었습니다.\n\n시안 관리에서 진행 상황을 확인하실 수 있습니다.`,
+            isReadByAdmin: true,
+            isReadByUser: false,
+          },
+        });
+
+        // 스레드 상태를 IN_PROGRESS로 변경
+        await prisma.communicationThread.update({
+          where: { id: threadId },
+          data: {
+            status: "IN_PROGRESS",
+            lastReplyAt: new Date(),
+          },
+        });
+      }
+
+      return NextResponse.json({
+        success: true,
+        data: design,
+        message: "시안이 생성되었습니다.",
+      });
+    }
+
+    return NextResponse.json(
+      { error: "workflowId 또는 (userId + workflowType)이 필요합니다" },
+      { status: 400 }
+    );
   } catch (error) {
     if (error instanceof Error && error.message === "UNAUTHORIZED") {
       return NextResponse.json({ error: "인증이 필요합니다" }, { status: 401 });

@@ -21,6 +21,10 @@ import {
   Shield,
   Calendar,
   Loader2,
+  Palette,
+  Paperclip,
+  X,
+  ExternalLink,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -29,6 +33,7 @@ interface Message {
   authorType: string;
   authorName: string;
   content: string;
+  attachments?: string[];
   createdAt: string;
   expectedCompletionDate?: string;
 }
@@ -64,11 +69,27 @@ export default function ThreadDetailPage() {
   const [thread, setThread] = useState<Thread | null>(null);
   const [loading, setLoading] = useState(true);
   const [newMessage, setNewMessage] = useState("");
+  const [attachments, setAttachments] = useState<string[]>([]);
+  const [attachmentInput, setAttachmentInput] = useState("");
   const [expectedDate, setExpectedDate] = useState("");
   const [changeStatus, setChangeStatus] = useState<string>("");
   const [sending, setSending] = useState(false);
   const [updating, setUpdating] = useState(false);
+  const [creatingDesign, setCreatingDesign] = useState(false);
+  const [showDesignModal, setShowDesignModal] = useState(false);
+  const [selectedWorkflowType, setSelectedWorkflowType] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const WORKFLOW_TYPES = [
+    { value: "NAMECARD", label: "명함" },
+    { value: "NAMETAG", label: "명찰" },
+    { value: "CONTRACT", label: "계약서" },
+    { value: "ENVELOPE", label: "대봉투" },
+    { value: "WEBSITE", label: "홈페이지" },
+    { value: "BLOG", label: "블로그" },
+    { value: "META_ADS", label: "메타광고" },
+    { value: "NAVER_ADS", label: "네이버광고" },
+  ];
 
   useEffect(() => {
     fetchThread();
@@ -111,6 +132,7 @@ export default function ThreadDetailPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           content: newMessage,
+          attachments: attachments.length > 0 ? attachments : undefined,
           expectedCompletionDate: expectedDate || undefined,
           changeStatus: changeStatus || undefined,
         }),
@@ -123,6 +145,7 @@ export default function ThreadDetailPage() {
       }
 
       setNewMessage("");
+      setAttachments([]);
       setExpectedDate("");
       setChangeStatus("");
       fetchThread();
@@ -131,6 +154,66 @@ export default function ThreadDetailPage() {
       alert("메시지 전송에 실패했습니다.");
     } finally {
       setSending(false);
+    }
+  };
+
+  const handleAddAttachment = () => {
+    if (attachmentInput.trim()) {
+      setAttachments([...attachments, attachmentInput.trim()]);
+      setAttachmentInput("");
+    }
+  };
+
+  const handleRemoveAttachment = (index: number) => {
+    setAttachments(attachments.filter((_, i) => i !== index));
+  };
+
+  const handleCreateDesign = async () => {
+    if (!thread || !selectedWorkflowType) {
+      alert("시안 유형을 선택해주세요.");
+      return;
+    }
+
+    setCreatingDesign(true);
+
+    try {
+      // 문의 내용 요약 생성
+      const firstUserMessage = thread.messages.find((m) => m.authorType === "user");
+      const initialContent = firstUserMessage?.content || thread.title;
+
+      const res = await fetch("/api/admin/designs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: thread.user.id,
+          workflowType: selectedWorkflowType,
+          threadId: thread.id,
+          initialContent,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error);
+      }
+
+      setShowDesignModal(false);
+
+      if (data.existing) {
+        alert("이미 해당 유형의 시안이 존재합니다. 기존 시안으로 이동합니다.");
+      } else {
+        alert("시안이 생성되었습니다.");
+        fetchThread(); // 스레드 새로고침 (자동 메시지 추가됨)
+      }
+
+      // 시안 상세 페이지로 이동
+      router.push(`/designs/${data.data.id}`);
+    } catch (error) {
+      console.error("Failed to create design:", error);
+      alert(error instanceof Error ? error.message : "시안 생성에 실패했습니다.");
+    } finally {
+      setCreatingDesign(false);
     }
   };
 
@@ -266,6 +349,26 @@ export default function ThreadDetailPage() {
                           </span>
                         </div>
                         <p className="whitespace-pre-wrap">{msg.content}</p>
+                        {msg.attachments && msg.attachments.length > 0 && (
+                          <div className={`mt-2 pt-2 border-t ${isAdmin ? "border-blue-500" : "border-gray-200 dark:border-gray-700"}`}>
+                            <div className="text-xs mb-1 opacity-70">첨부파일:</div>
+                            <div className="space-y-1">
+                              {msg.attachments.map((url, i) => (
+                                <a
+                                  key={i}
+                                  href={url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className={`flex items-center gap-1 text-xs ${isAdmin ? "text-blue-100 hover:text-white" : "text-blue-600 hover:text-blue-800"}`}
+                                >
+                                  <Paperclip className="w-3 h-3" />
+                                  <span className="truncate max-w-[200px]">{url.split('/').pop() || url}</span>
+                                  <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                                </a>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                         {msg.expectedCompletionDate && (
                           <div className={`mt-2 pt-2 border-t ${isAdmin ? "border-blue-500" : "border-gray-200 dark:border-gray-700"} text-xs flex items-center gap-1`}>
                             <Calendar className="w-3 h-3" />
@@ -308,6 +411,55 @@ export default function ThreadDetailPage() {
                     </select>
                   </div>
                 </div>
+
+                {/* 첨부파일 영역 */}
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">첨부파일 URL (선택)</label>
+                  <div className="flex gap-2">
+                    <Input
+                      value={attachmentInput}
+                      onChange={(e) => setAttachmentInput(e.target.value)}
+                      placeholder="https://drive.google.com/..."
+                      className="text-sm"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          handleAddAttachment();
+                        }
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleAddAttachment}
+                      disabled={!attachmentInput.trim()}
+                    >
+                      <Paperclip className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  {attachments.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {attachments.map((url, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded text-xs"
+                        >
+                          <Paperclip className="w-3 h-3" />
+                          <span className="truncate max-w-[150px]">{url.split('/').pop() || url}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveAttachment(index)}
+                            className="text-red-500 hover:text-red-700"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 <div className="flex gap-3">
                   <textarea
                     value={newMessage}
@@ -418,8 +570,110 @@ export default function ThreadDetailPage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* 시안 생성 */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Palette className="w-4 h-4" />
+                시안 관리
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Button
+                onClick={() => setShowDesignModal(true)}
+                className="w-full"
+                variant="outline"
+              >
+                <Palette className="w-4 h-4 mr-2" />
+                시안 생성
+              </Button>
+              <p className="text-xs text-muted-foreground mt-2">
+                이 문의를 기반으로 시안을 생성합니다.
+              </p>
+            </CardContent>
+          </Card>
         </div>
       </div>
+
+      {/* 시안 생성 모달 */}
+      {showDesignModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md mx-4">
+            <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                <Palette className="w-5 h-5" />
+                시안 생성
+              </h2>
+              <button
+                onClick={() => setShowDesignModal(false)}
+                className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-4">
+              <div>
+                <p className="text-sm text-muted-foreground mb-3">
+                  <strong>{thread.user.clientName}</strong>님의 문의를 기반으로 시안을 생성합니다.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  시안 유형 선택 <span className="text-red-500">*</span>
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {WORKFLOW_TYPES.map((type) => (
+                    <button
+                      key={type.value}
+                      onClick={() => setSelectedWorkflowType(type.value)}
+                      className={`p-3 text-left border rounded-lg transition-colors ${
+                        selectedWorkflowType === type.value
+                          ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
+                          : "border-gray-300 dark:border-gray-600 hover:border-blue-300"
+                      }`}
+                    >
+                      <span className="text-sm font-medium">{type.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
+                <p className="text-xs text-muted-foreground">
+                  • 문의 내용이 시안 피드백에 자동으로 추가됩니다<br />
+                  • 시안 생성 후 시안 관리 페이지로 이동합니다<br />
+                  • 이미 해당 유형의 시안이 있으면 기존 시안으로 이동합니다
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-3 p-4 border-t dark:border-gray-700">
+              <Button
+                variant="outline"
+                onClick={() => setShowDesignModal(false)}
+                className="flex-1"
+              >
+                취소
+              </Button>
+              <Button
+                onClick={handleCreateDesign}
+                disabled={!selectedWorkflowType || creatingDesign}
+                className="flex-1"
+              >
+                {creatingDesign ? (
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                ) : (
+                  <Palette className="w-4 h-4 mr-2" />
+                )}
+                시안 생성
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
