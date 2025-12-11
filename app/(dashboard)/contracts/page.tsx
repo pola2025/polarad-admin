@@ -14,6 +14,7 @@ import {
   Loader2,
   Plus,
   X,
+  Trash2,
 } from "lucide-react";
 
 interface Contract {
@@ -105,6 +106,7 @@ export default function AdminContractsPage() {
   const [monthlyFee, setMonthlyFee] = useState<number | "">("");
   const [setupFee, setSetupFee] = useState<number | "">(0);
   const [additionalNotes, setAdditionalNotes] = useState("");
+  const [isPromotion, setIsPromotion] = useState(false);
   const [creating, setCreating] = useState(false);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
@@ -173,6 +175,7 @@ export default function AdminContractsPage() {
     setMonthlyFee("");
     setSetupFee(0);
     setAdditionalNotes("");
+    setIsPromotion(false);
     setUserDropdownOpen(false);
   };
 
@@ -201,6 +204,7 @@ export default function AdminContractsPage() {
           monthlyFee: monthlyFee || selectedPackage.price,
           setupFee: setupFee || 0,
           additionalNotes,
+          isPromotion,
         }),
       });
 
@@ -265,6 +269,30 @@ export default function AdminContractsPage() {
       fetchContracts();
     } catch (error) {
       alert(error instanceof Error ? error.message : "거절 처리 중 오류가 발생했습니다");
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const handleDelete = async (id: string, contractNumber: string) => {
+    if (!confirm(`계약서 ${contractNumber}를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) return;
+
+    setProcessingId(id);
+    try {
+      const res = await fetch(`/api/admin/contracts/${id}`, {
+        method: "DELETE",
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "삭제 실패");
+      }
+
+      alert(data.message);
+      fetchContracts();
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "삭제 처리 중 오류가 발생했습니다");
     } finally {
       setProcessingId(null);
     }
@@ -455,6 +483,16 @@ export default function AdminContractsPage() {
                         >
                           <Eye className="w-4 h-4" />
                         </a>
+                        {contract.status !== "ACTIVE" && (
+                          <button
+                            onClick={() => handleDelete(contract.id, contract.contractNumber)}
+                            disabled={processingId === contract.id}
+                            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                            title="삭제"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -544,6 +582,16 @@ export default function AdminContractsPage() {
                             >
                               <Eye className="w-4 h-4" />
                             </a>
+                            {contract.status !== "ACTIVE" && (
+                              <button
+                                onClick={() => handleDelete(contract.id, contract.contractNumber)}
+                                disabled={processingId === contract.id}
+                                className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                                title="삭제"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -707,6 +755,26 @@ export default function AdminContractsPage() {
                   placeholder="특이사항이나 추가 조건을 입력하세요..."
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
                 />
+              </div>
+
+              {/* 프로모션 */}
+              <div className="p-3 border-2 border-red-300 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={isPromotion}
+                    onChange={(e) => setIsPromotion(e.target.checked)}
+                    className="mt-1 w-4 h-4 text-red-600 border-red-300 rounded focus:ring-red-500"
+                  />
+                  <div>
+                    <span className="font-medium text-red-600 dark:text-red-400">
+                      🎁 최초 10개 프로모션 기업
+                    </span>
+                    <p className="text-xs text-red-500 dark:text-red-400 mt-1">
+                      2년간 Meta 광고 연동 및 자동화 제공 (한정 프로모션)
+                    </p>
+                  </div>
+                </label>
               </div>
 
               {/* 요약 */}

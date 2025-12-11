@@ -362,6 +362,7 @@ model Contract {
 
   // 추가 옵션
   additionalNotes String?        @map("additional_notes") // 특이사항
+  isPromotion     Boolean        @default(false) @map("is_promotion") // 최초 10개 프로모션 기업
 
   // 서명 정보
   clientSignature String?        @map("client_signature") // 계약자 서명 (base64)

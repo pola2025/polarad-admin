@@ -148,6 +148,7 @@ export async function POST(request: NextRequest) {
       monthlyFee,
       setupFee,
       additionalNotes,
+      isPromotion,
     } = body;
 
     if (!userId || !packageId) {
@@ -216,6 +217,7 @@ export async function POST(request: NextRequest) {
         setupFee: setupFee || 0,
         totalAmount,
         additionalNotes,
+        isPromotion: isPromotion || false,
         status: "PENDING",
       },
     });
