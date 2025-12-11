@@ -69,8 +69,8 @@ export default function ThreadDetailPage() {
   const [thread, setThread] = useState<Thread | null>(null);
   const [loading, setLoading] = useState(true);
   const [newMessage, setNewMessage] = useState("");
-  const [attachments, setAttachments] = useState<string[]>([]);
-  const [attachmentInput, setAttachmentInput] = useState("");
+  const [attachments, setAttachments] = useState<{ name: string; url: string }[]>([]);
+  const [uploading, setUploading] = useState(false);
   const [expectedDate, setExpectedDate] = useState("");
   const [changeStatus, setChangeStatus] = useState<string>("");
   const [sending, setSending] = useState(false);
@@ -79,6 +79,7 @@ export default function ThreadDetailPage() {
   const [showDesignModal, setShowDesignModal] = useState(false);
   const [selectedWorkflowType, setSelectedWorkflowType] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const WORKFLOW_TYPES = [
     { value: "NAMECARD", label: "명함" },
@@ -132,7 +133,7 @@ export default function ThreadDetailPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           content: newMessage,
-          attachments: attachments.length > 0 ? attachments : undefined,
+          attachments: attachments.length > 0 ? attachments.map((a) => a.url) : undefined,
           expectedCompletionDate: expectedDate || undefined,
           changeStatus: changeStatus || undefined,
         }),
@@ -157,10 +158,64 @@ export default function ThreadDetailPage() {
     }
   };
 
-  const handleAddAttachment = () => {
-    if (attachmentInput.trim()) {
-      setAttachments([...attachments, attachmentInput.trim()]);
-      setAttachmentInput("");
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploading(true);
+
+    try {
+      for (const file of Array.from(files)) {
+        // 파일 크기 체크 (10MB)
+        if (file.size > 10 * 1024 * 1024) {
+          alert(`${file.name}: 파일 크기는 10MB 이하만 가능합니다.`);
+          continue;
+        }
+
+        // Presigned URL 요청
+        const presignedRes = await fetch("/api/upload", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            fileName: file.name,
+            contentType: file.type,
+            category: "communications",
+          }),
+        });
+
+        const presignedData = await presignedRes.json();
+
+        if (!presignedRes.ok) {
+          alert(`${file.name}: ${presignedData.error}`);
+          continue;
+        }
+
+        // R2에 파일 업로드
+        const uploadRes = await fetch(presignedData.uploadUrl, {
+          method: "PUT",
+          body: file,
+          headers: {
+            "Content-Type": file.type,
+          },
+        });
+
+        if (!uploadRes.ok) {
+          alert(`${file.name}: 파일 업로드에 실패했습니다.`);
+          continue;
+        }
+
+        // 첨부파일 목록에 추가
+        setAttachments((prev) => [...prev, { name: file.name, url: presignedData.publicUrl }]);
+      }
+    } catch (error) {
+      console.error("File upload error:", error);
+      alert("파일 업로드 중 오류가 발생했습니다.");
+    } finally {
+      setUploading(false);
+      // 파일 입력 초기화
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     }
   };
 
@@ -414,43 +469,60 @@ export default function ThreadDetailPage() {
 
                 {/* 첨부파일 영역 */}
                 <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">첨부파일 URL (선택)</label>
+                  <label className="text-xs text-muted-foreground mb-1 block">
+                    파일첨부 (선택) - jpg, png, pdf / 최대 10MB
+                  </label>
                   <div className="flex gap-2">
-                    <Input
-                      value={attachmentInput}
-                      onChange={(e) => setAttachmentInput(e.target.value)}
-                      placeholder="https://drive.google.com/..."
-                      className="text-sm"
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          handleAddAttachment();
-                        }
-                      }}
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".jpg,.jpeg,.png,.pdf"
+                      multiple
+                      onChange={handleFileUpload}
+                      className="hidden"
+                      id="file-upload"
                     />
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={handleAddAttachment}
-                      disabled={!attachmentInput.trim()}
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploading}
+                      className="w-full justify-center"
                     >
-                      <Paperclip className="w-4 h-4" />
+                      {uploading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          업로드 중...
+                        </>
+                      ) : (
+                        <>
+                          <Paperclip className="w-4 h-4 mr-2" />
+                          파일 선택
+                        </>
+                      )}
                     </Button>
                   </div>
                   {attachments.length > 0 && (
                     <div className="flex flex-wrap gap-2 mt-2">
-                      {attachments.map((url, index) => (
+                      {attachments.map((file, index) => (
                         <div
                           key={index}
-                          className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded text-xs"
+                          className="flex items-center gap-1 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 px-2 py-1 rounded text-xs"
                         >
-                          <Paperclip className="w-3 h-3" />
-                          <span className="truncate max-w-[150px]">{url.split('/').pop() || url}</span>
+                          <Paperclip className="w-3 h-3 text-blue-600" />
+                          <a
+                            href={file.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="truncate max-w-[150px] text-blue-600 hover:underline"
+                          >
+                            {file.name}
+                          </a>
                           <button
                             type="button"
                             onClick={() => handleRemoveAttachment(index)}
-                            className="text-red-500 hover:text-red-700"
+                            className="text-red-500 hover:text-red-700 ml-1"
                           >
                             <X className="w-3 h-3" />
                           </button>
