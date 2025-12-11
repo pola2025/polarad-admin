@@ -280,8 +280,7 @@ export default function AdminContractDetailPage({
               <div className="grid md:grid-cols-2 gap-4">
                 <InfoRow label="패키지" value={contract.package.displayName} />
                 <InfoRow label="계약 기간" value={`${contract.contractPeriod}개월`} />
-                <InfoRow label="월 서비스 비용" value={formatCurrency(contract.monthlyFee)} />
-                <InfoRow label="총 계약 금액" value={formatCurrency(contract.totalAmount)} highlight />
+                <InfoRow label="계약 금액" value={formatCurrency(contract.totalAmount)} highlight />
                 {contract.startDate && (
                   <InfoRow label="계약 시작일" value={formatDate(contract.startDate)} />
                 )}

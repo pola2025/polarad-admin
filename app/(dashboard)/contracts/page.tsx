@@ -410,7 +410,7 @@ export default function AdminContractsPage() {
 
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-medium">{formatCurrency(contract.monthlyFee)}/월</p>
+                        <p className="text-sm font-medium">{formatCurrency(contract.totalAmount)}</p>
                         <p className="text-xs text-gray-500">{formatDate(contract.createdAt)}</p>
                       </div>
 
@@ -492,8 +492,7 @@ export default function AdminContractsPage() {
                           <p className="text-xs text-gray-500">{contract.contractPeriod}개월</p>
                         </td>
                         <td className="px-4 py-4">
-                          <p className="font-medium">{formatCurrency(contract.monthlyFee)}/월</p>
-                          <p className="text-xs text-gray-500">총 {formatCurrency(contract.totalAmount)}</p>
+                          <p className="font-medium">{formatCurrency(contract.totalAmount)}</p>
                         </td>
                         <td className="px-4 py-4">
                           <Badge variant={STATUS_COLORS[contract.status]}>
@@ -719,14 +718,13 @@ export default function AdminContractsPage() {
                     <strong>{contractPeriod}개월</strong> 계약서를 발송합니다.
                   </p>
                   <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                    월 {formatCurrency(Number(monthlyFee) || selectedPackage.price)} × {contractPeriod}개월
-                    {Number(setupFee) > 0 && ` + 셋업 ${formatCurrency(Number(setupFee))}`}
-                    {" = "}
+                    계약 금액:{" "}
                     <strong>
-                      총 {formatCurrency(
+                      {formatCurrency(
                         (Number(monthlyFee) || selectedPackage.price) * contractPeriod + (Number(setupFee) || 0)
                       )}
                     </strong>
+                    {Number(setupFee) > 0 && <span className="text-gray-400"> (셋업비 포함)</span>}
                   </p>
                 </div>
               )}
