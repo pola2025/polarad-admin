@@ -13,6 +13,8 @@ const ALLOWED_TYPES: Record<string, string> = {
   "image/jpeg": ".jpg",
   "image/png": ".png",
   "application/pdf": ".pdf",
+  "application/postscript": ".ai",
+  "application/illustrator": ".ai",
 };
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -34,7 +36,7 @@ export async function POST(request: NextRequest) {
     // 파일 타입 검증
     if (!Object.keys(ALLOWED_TYPES).includes(contentType)) {
       return NextResponse.json(
-        { error: "허용되지 않는 파일 형식입니다. (jpg, png, pdf만 가능)" },
+        { error: "허용되지 않는 파일 형식입니다. (jpg, png, pdf, ai만 가능)" },
         { status: 400 }
       );
     }

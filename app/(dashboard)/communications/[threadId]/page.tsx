@@ -376,9 +376,9 @@ export default function ThreadDetailPage() {
         <div className="lg:col-span-2 flex flex-col h-[calc(100vh-16rem)]">
           {/* 메시지 목록 */}
           <Card className="flex-1 overflow-hidden">
-            <CardContent className="p-0 h-full overflow-y-auto">
-              <div className="p-4 space-y-4">
-                {thread.messages.map((msg) => {
+            <CardContent className="p-0 h-full overflow-y-auto flex flex-col-reverse">
+              <div className="p-4 space-y-4 flex flex-col-reverse">
+                {[...thread.messages].reverse().map((msg) => {
                   const isAdmin = msg.authorType === "admin";
                   return (
                     <div
@@ -434,8 +434,8 @@ export default function ThreadDetailPage() {
                     </div>
                   );
                 })}
-                <div ref={messagesEndRef} />
               </div>
+              <div ref={messagesEndRef} />
             </CardContent>
           </Card>
 
@@ -470,13 +470,13 @@ export default function ThreadDetailPage() {
                 {/* 첨부파일 영역 */}
                 <div>
                   <label className="text-xs text-muted-foreground mb-1 block">
-                    파일첨부 (선택) - jpg, png, pdf / 최대 10MB
+                    파일첨부 (선택) - jpg, png, pdf, ai / 최대 10MB
                   </label>
                   <div className="flex gap-2">
                     <input
                       ref={fileInputRef}
                       type="file"
-                      accept=".jpg,.jpeg,.png,.pdf"
+                      accept=".jpg,.jpeg,.png,.pdf,.ai"
                       multiple
                       onChange={handleFileUpload}
                       className="hidden"
