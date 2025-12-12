@@ -230,7 +230,7 @@ export default function AdminContractsPage() {
 
     setProcessingId(id);
     try {
-      const res = await fetch(`/api/admin/contracts/${id}/approve`, {
+      const res = await fetch(`/api/contracts/${id}/approve`, {
         method: "POST",
       });
 
@@ -254,7 +254,7 @@ export default function AdminContractsPage() {
 
     setProcessingId(id);
     try {
-      const res = await fetch(`/api/admin/contracts/${id}/reject`, {
+      const res = await fetch(`/api/contracts/${id}/reject`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ reason }),
