@@ -715,30 +715,16 @@ export default function AdminContractsPage() {
                 </select>
               </div>
 
-              {/* 월 요금 */}
+              {/* 패키지서비스 비용 */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  월 요금 (원)
+                  패키지서비스 비용 (원)
                 </label>
                 <input
                   type="number"
                   value={monthlyFee}
                   onChange={(e) => setMonthlyFee(e.target.value ? Number(e.target.value) : "")}
                   placeholder={selectedPackage ? String(selectedPackage.price) : "패키지 선택 시 자동 입력"}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                />
-              </div>
-
-              {/* 셋업 비용 */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  셋업 비용 (원)
-                </label>
-                <input
-                  type="number"
-                  value={setupFee}
-                  onChange={(e) => setSetupFee(e.target.value ? Number(e.target.value) : "")}
-                  placeholder="0"
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 />
               </div>
@@ -786,13 +772,12 @@ export default function AdminContractsPage() {
                     <strong>{contractPeriod}개월</strong> 계약서를 발송합니다.
                   </p>
                   <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                    계약 금액:{" "}
+                    패키지서비스 비용:{" "}
                     <strong>
                       {formatCurrency(
-                        (Number(monthlyFee) || selectedPackage.price) * contractPeriod + (Number(setupFee) || 0)
+                        (Number(monthlyFee) || selectedPackage.price) * contractPeriod
                       )}
                     </strong>
-                    {Number(setupFee) > 0 && <span className="text-gray-400"> (셋업비 포함)</span>}
                   </p>
                 </div>
               )}

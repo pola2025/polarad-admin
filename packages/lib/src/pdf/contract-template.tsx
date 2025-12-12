@@ -236,11 +236,7 @@ export function ContractPDF({
             <Text style={styles.value}>{contractPeriod}개월 ({startDate} ~ {endDate})</Text>
           </View>
           <View style={styles.row}>
-            <Text style={styles.label}>월 서비스 비용</Text>
-            <Text style={styles.value}>{formatCurrency(monthlyFee)}</Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.label}>총 계약 금액</Text>
+            <Text style={styles.label}>패키지서비스 비용</Text>
             <Text style={styles.value}>{formatCurrency(totalAmount)} (부가세 별도)</Text>
           </View>
         </View>

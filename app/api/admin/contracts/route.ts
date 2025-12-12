@@ -205,7 +205,7 @@ export async function POST(request: NextRequest) {
 
     const finalMonthlyFee = monthlyFee || pkg.price;
     const period = contractPeriod || 12;
-    const totalAmount = finalMonthlyFee * period + (setupFee || 0);
+    const totalAmount = finalMonthlyFee * period;
 
     const contract = await prisma.contract.create({
       data: {
@@ -214,7 +214,7 @@ export async function POST(request: NextRequest) {
         packageId,
         contractPeriod: period,
         monthlyFee: finalMonthlyFee,
-        setupFee: setupFee || 0,
+        setupFee: 0,
         totalAmount,
         additionalNotes,
         isPromotion: isPromotion || false,
