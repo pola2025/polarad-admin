@@ -205,7 +205,7 @@ export async function POST(request: NextRequest) {
 
     const finalMonthlyFee = monthlyFee || pkg.price;
     const period = contractPeriod || 12;
-    const totalAmount = finalMonthlyFee * period;
+    const totalAmount = finalMonthlyFee; // 패키지서비스 비용 (월 금액 그대로)
 
     const contract = await prisma.contract.create({
       data: {

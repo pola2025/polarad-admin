@@ -774,9 +774,7 @@ export default function AdminContractsPage() {
                   <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                     패키지서비스 비용:{" "}
                     <strong>
-                      {formatCurrency(
-                        (Number(monthlyFee) || selectedPackage.price) * contractPeriod
-                      )}
+                      {formatCurrency(Number(monthlyFee) || selectedPackage.price)}
                     </strong>
                   </p>
                 </div>
