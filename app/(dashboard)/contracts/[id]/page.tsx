@@ -195,38 +195,40 @@ export default function AdminContractDetailPage({
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+    <div className="space-y-4 lg:space-y-6">
+      {/* 헤더 */}
+      <div className="flex items-start sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-2 sm:gap-4">
           <button
             onClick={() => router.push("/contracts")}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+            className="p-1.5 sm:p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">계약 상세</h1>
-            <p className="text-sm text-gray-500 font-mono">{contract.contractNumber}</p>
+            <h1 className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white">계약 상세</h1>
+            <p className="text-xs sm:text-sm text-gray-500 font-mono">{contract.contractNumber}</p>
           </div>
         </div>
-        <Badge variant={STATUS_COLORS[contract.status]} className="text-sm px-3 py-1">
+        <Badge variant={STATUS_COLORS[contract.status]} className="text-xs sm:text-sm px-2 sm:px-3 py-0.5 sm:py-1 flex-shrink-0">
           {STATUS_LABELS[contract.status]}
         </Badge>
       </div>
 
+      {/* 승인 대기 알림 카드 */}
       {contract.status === "SUBMITTED" && (
         <Card className="border-yellow-200 bg-yellow-50 dark:bg-yellow-900/20">
-          <CardContent className="py-4">
-            <div className="flex items-center justify-between">
+          <CardContent className="py-3 sm:py-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div className="flex items-center gap-2 text-yellow-700 dark:text-yellow-400">
-                <Clock className="w-5 h-5" />
-                <span className="font-medium">승인 대기 중인 계약입니다</span>
+                <Clock className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+                <span className="font-medium text-sm sm:text-base">승인 대기 중인 계약입니다</span>
               </div>
               <div className="flex gap-2">
                 <button
                   onClick={handleApprove}
                   disabled={!!processingAction}
-                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
+                  className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
                 >
                   {processingAction === "approve" ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -238,7 +240,7 @@ export default function AdminContractDetailPage({
                 <button
                   onClick={handleReject}
                   disabled={!!processingAction}
-                  className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
+                  className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
                 >
                   {processingAction === "reject" ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -267,17 +269,17 @@ export default function AdminContractDetailPage({
         </Card>
       )}
 
-      <div className="grid lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
+      <div className="grid lg:grid-cols-3 gap-4 lg:gap-6">
+        <div className="lg:col-span-2 space-y-4 lg:space-y-6">
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <FileText className="w-5 h-5" />
+            <CardHeader className="px-4 py-3 lg:px-6 lg:py-4">
+              <CardTitle className="flex items-center gap-2 text-base lg:text-lg">
+                <FileText className="w-4 h-4 lg:w-5 lg:h-5" />
                 계약 정보
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid md:grid-cols-2 gap-4">
+            <CardContent className="px-4 pb-4 lg:px-6 lg:pb-6 space-y-4">
+              <div className="grid grid-cols-2 gap-3 lg:gap-4">
                 <InfoRow label="패키지" value={contract.package.displayName} />
                 <InfoRow label="계약 기간" value={`${contract.contractPeriod}개월`} />
                 <InfoRow label="계약 금액" value={formatCurrency(contract.totalAmount)} highlight />
@@ -300,18 +302,18 @@ export default function AdminContractDetailPage({
           </Card>
 
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Building className="w-5 h-5" />
+            <CardHeader className="px-4 py-3 lg:px-6 lg:py-4">
+              <CardTitle className="flex items-center gap-2 text-base lg:text-lg">
+                <Building className="w-4 h-4 lg:w-5 lg:h-5" />
                 사업자 정보
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="grid md:grid-cols-2 gap-4">
+            <CardContent className="px-4 pb-4 lg:px-6 lg:pb-6">
+              <div className="grid grid-cols-2 gap-3 lg:gap-4">
                 <InfoRow label="상호" value={contract.companyName} />
                 <InfoRow label="대표자" value={contract.ceoName} />
                 <InfoRow label="사업자등록번호" value={contract.businessNumber} />
-                <div className="md:col-span-2">
+                <div className="col-span-2">
                   <InfoRow
                     label="주소"
                     value={contract.address}
@@ -323,21 +325,21 @@ export default function AdminContractDetailPage({
           </Card>
 
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <User className="w-5 h-5" />
+            <CardHeader className="px-4 py-3 lg:px-6 lg:py-4">
+              <CardTitle className="flex items-center gap-2 text-base lg:text-lg">
+                <User className="w-4 h-4 lg:w-5 lg:h-5" />
                 담당자 정보
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="grid md:grid-cols-2 gap-4">
+            <CardContent className="px-4 pb-4 lg:px-6 lg:pb-6">
+              <div className="grid grid-cols-2 gap-3 lg:gap-4">
                 <InfoRow label="담당자명" value={contract.contactName} />
                 <InfoRow
                   label="연락처"
                   value={contract.contactPhone}
                   icon={<Phone className="w-4 h-4" />}
                 />
-                <div className="md:col-span-2">
+                <div className="col-span-2">
                   <InfoRow
                     label="이메일"
                     value={contract.contactEmail}
@@ -350,21 +352,21 @@ export default function AdminContractDetailPage({
 
           {contract.clientSignature && (
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <FileText className="w-5 h-5" />
+              <CardHeader className="px-4 py-3 lg:px-6 lg:py-4">
+                <CardTitle className="flex items-center gap-2 text-base lg:text-lg">
+                  <FileText className="w-4 h-4 lg:w-5 lg:h-5" />
                   전자 서명
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+              <CardContent className="px-4 pb-4 lg:px-6 lg:pb-6">
+                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 lg:p-4">
                   <img
                     src={contract.clientSignature}
                     alt="계약자 서명"
-                    className="max-w-[300px] h-auto mx-auto border border-gray-200 dark:border-gray-700 rounded"
+                    className="max-w-[200px] lg:max-w-[300px] h-auto mx-auto border border-gray-200 dark:border-gray-700 rounded"
                   />
                   {contract.signedAt && (
-                    <p className="text-center text-sm text-gray-500 mt-2">
+                    <p className="text-center text-xs lg:text-sm text-gray-500 mt-2">
                       서명일시: {formatDate(contract.signedAt)}
                     </p>
                   )}
@@ -374,15 +376,15 @@ export default function AdminContractDetailPage({
           )}
         </div>
 
-        <div className="space-y-6">
+        <div className="space-y-4 lg:space-y-6">
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <User className="w-5 h-5" />
+            <CardHeader className="px-4 py-3 lg:px-6 lg:py-4">
+              <CardTitle className="flex items-center gap-2 text-base lg:text-lg">
+                <User className="w-4 h-4 lg:w-5 lg:h-5" />
                 요청자 정보
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="px-4 pb-4 lg:px-6 lg:pb-6 space-y-3">
               <InfoRow label="이름" value={contract.user.name} />
               <InfoRow label="이메일" value={contract.user.email} />
               <InfoRow label="연락처" value={contract.user.phone} />
@@ -397,13 +399,13 @@ export default function AdminContractDetailPage({
           </Card>
 
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Package className="w-5 h-5" />
+            <CardHeader className="px-4 py-3 lg:px-6 lg:py-4">
+              <CardTitle className="flex items-center gap-2 text-base lg:text-lg">
+                <Package className="w-4 h-4 lg:w-5 lg:h-5" />
                 패키지 상세
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-4 pb-4 lg:px-6 lg:pb-6">
               <div className="space-y-3">
                 <div>
                   <p className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -438,13 +440,13 @@ export default function AdminContractDetailPage({
           </Card>
 
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <History className="w-5 h-5" />
+            <CardHeader className="px-4 py-3 lg:px-6 lg:py-4">
+              <CardTitle className="flex items-center gap-2 text-base lg:text-lg">
+                <History className="w-4 h-4 lg:w-5 lg:h-5" />
                 처리 이력
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-4 pb-4 lg:px-6 lg:pb-6">
               <div className="space-y-3">
                 <TimelineItem label="계약 요청" date={contract.createdAt} status="completed" />
                 {contract.signedAt && (
@@ -483,9 +485,9 @@ export default function AdminContractDetailPage({
           {["APPROVED", "ACTIVE", "EXPIRED"].includes(contract.status) && (
             <a
               href={`/api/contracts/${contract.id}/pdf`}
-              className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="flex items-center justify-center gap-2 w-full px-4 py-2.5 lg:py-3 bg-blue-600 text-white text-sm lg:text-base rounded-lg hover:bg-blue-700 transition-colors"
             >
-              <Download className="w-5 h-5" />
+              <Download className="w-4 h-4 lg:w-5 lg:h-5" />
               계약서 PDF 다운로드
             </a>
           )}
