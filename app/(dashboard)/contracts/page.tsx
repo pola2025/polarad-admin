@@ -693,7 +693,7 @@ export default function AdminContractsPage() {
                       }`}
                     >
                       <p className="font-medium text-gray-900 dark:text-white">{pkg.displayName}</p>
-                      <p className="text-sm text-gray-500">{formatCurrency(pkg.price)}/월</p>
+                      <p className="text-sm text-gray-500">{formatCurrency(pkg.price)}</p>
                     </button>
                   ))}
                 </div>

@@ -412,7 +412,7 @@ export default function AdminContractDetailPage({
                   <p className="text-blue-600 font-medium">
                     {contract.package.price === 0
                       ? "별도 협의"
-                      : `${formatCurrency(contract.package.price)}/월`}
+                      : formatCurrency(contract.package.price)}
                   </p>
                 </div>
                 {contract.package.description && (
