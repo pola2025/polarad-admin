@@ -21,6 +21,7 @@ interface ContractData {
   endDate: Date;
   signedAt: Date;
   clientSignature?: string;
+  isPromotion?: boolean;
 }
 
 export async function generateContractPDF(data: ContractData): Promise<Buffer> {
@@ -50,6 +51,7 @@ export async function generateContractPDF(data: ContractData): Promise<Buffer> {
     endDate: formatDate(data.endDate),
     signedAt: formatDate(data.signedAt),
     clientSignature: data.clientSignature,
+    isPromotion: data.isPromotion,
   });
 
   const buffer = await renderToBuffer(pdfDocument);

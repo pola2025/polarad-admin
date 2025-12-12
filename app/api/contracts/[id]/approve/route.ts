@@ -92,6 +92,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         endDate,
         signedAt: contract.signedAt || new Date(),
         clientSignature: contract.clientSignature || undefined,
+        isPromotion: contract.isPromotion || false,
       });
 
       await sendContractEmail(
