@@ -61,9 +61,6 @@ export async function GET(request: NextRequest) {
           orderBy: { createdAt: "desc" },
           take: 1, // 최신 메시지만
         },
-        _count: {
-          select: { messages: true },
-        },
       },
       orderBy: [
         { status: "asc" }, // OPEN 우선
@@ -74,35 +71,26 @@ export async function GET(request: NextRequest) {
     });
 
     // 읽지 않은 사용자 메시지 수 계산
-    const threadsWithUnread = threads.map(
-      (thread: (typeof threads)[number]) => {
-        const lastMessage = thread.messages[0];
-        const hasUnreadUserMessage =
-          lastMessage &&
-          lastMessage.authorType === "user" &&
-          !lastMessage.isReadByAdmin;
+    const threadsWithUnread = threads.map((thread: typeof threads[number]) => {
+      const lastMessage = thread.messages[0];
+      const hasUnreadUserMessage =
+        lastMessage &&
+        lastMessage.authorType === "user" &&
+        !lastMessage.isReadByAdmin;
 
-        return {
-          ...thread,
-          lastMessage: lastMessage || null,
-          hasUnreadUserMessage,
-          messageCount: thread._count.messages,
-        };
-      },
-    );
+      return {
+        ...thread,
+        lastMessage: lastMessage || null,
+        hasUnreadUserMessage,
+      };
+    });
 
     // 상태별 통계
     const stats = {
       total: await prisma.communicationThread.count(),
-      open: await prisma.communicationThread.count({
-        where: { status: "OPEN" },
-      }),
-      inProgress: await prisma.communicationThread.count({
-        where: { status: "IN_PROGRESS" },
-      }),
-      resolved: await prisma.communicationThread.count({
-        where: { status: "RESOLVED" },
-      }),
+      open: await prisma.communicationThread.count({ where: { status: "OPEN" } }),
+      inProgress: await prisma.communicationThread.count({ where: { status: "IN_PROGRESS" } }),
+      resolved: await prisma.communicationThread.count({ where: { status: "RESOLVED" } }),
     };
 
     // 읽지 않은 메시지 수
@@ -132,7 +120,7 @@ export async function GET(request: NextRequest) {
     console.error("[Admin API] GET /api/admin/communications error:", error);
     return NextResponse.json(
       { error: "스레드 목록 조회 중 오류가 발생했습니다" },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
